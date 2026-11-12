@@ -1,0 +1,14 @@
+[
+  {
+    "aircraft_id": "AC1",
+    "route": ["A", "B"],
+    "departure_time_s": 0.0,
+    "cruise_altitude_ft": 30000
+  },
+  {
+    "aircraft_id": "AC2",
+    "route": ["B", "A"],
+    "departure_time_s": 0.0,
+    "cruise_altitude_ft": 32000
+  }
+]

@@ -1,0 +1,47 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      # The CI never calls an LLM: tests marked `llm` are skipped (see pyproject.toml).
+      CREWAI_TRACING_ENABLED: "false"
+      CREWAI_DISABLE_TELEMETRY: "true"
+      OTEL_SDK_DISABLED: "true"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+
+      - name: Install dependencies
+        run: uv sync --locked
+
+      - name: Lint (ruff)
+        run: |
+          uv run ruff check .
+          uv run ruff format --check .
+
+      - name: Tests (pytest)
+        run: uv run pytest -q
+
+      - name: Flow runs end to end (no LLM)
+        run: |
+          for s in data/scenarios/*/; do
+            ATC_SCENARIO="$s" ATC_OUTPUT="output/$(basename "$s")" uv run kickoff > /dev/null
+          done
+
+      - name: Upload outputs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: flow-outputs
+          path: output/
+          if-no-files-found: ignore

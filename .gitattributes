@@ -1,0 +1,9 @@
+# Normalize line endings across Windows / Linux / macOS
+* text=auto eol=lf
+
+# Binary files
+*.png binary
+*.jpg binary
+*.pdf binary
+*.zip binary
+*.pptx binary

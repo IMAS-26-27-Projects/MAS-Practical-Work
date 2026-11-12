@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<graphml xmlns="http://graphml.graphdrawing.org/xmlns"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://graphml.graphdrawing.org/xmlns
+         http://graphml.graphdrawing.org/xmlns/1.0/graphml.xsd">
+
+  <key id="latitude" for="node" attr.name="latitude" attr.type="double"/>
+  <key id="longitude" for="node" attr.name="longitude" attr.type="double"/>
+  <key id="distance_nm" for="edge" attr.name="distance_nm" attr.type="double"/>
+
+  <graph id="G" edgedefault="directed">
+    <node id="A">
+      <data key="latitude">41.0</data>
+      <data key="longitude">2.0</data>
+    </node>
+    <node id="B">
+      <data key="latitude">41.0</data>
+      <data key="longitude">2.5</data>
+    </node>
+    <edge id="e1" source="A" target="B">
+      <data key="distance_nm">30.0</data>
+    </edge>
+    <edge id="e2" source="B" target="A">
+      <data key="distance_nm">30.0</data>
+    </edge>
+  </graph>
+</graphml>

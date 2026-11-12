@@ -1,0 +1,22 @@
+flow:
+  - changed-files:
+      - any-glob-to-any-file: ["src/atc_flow/main.py"]
+crews:
+  - changed-files:
+      - any-glob-to-any-file: ["src/atc_flow/crews/**"]
+tools:
+  - changed-files:
+      - any-glob-to-any-file: ["src/atc_flow/tools/**"]
+data:
+  - changed-files:
+      - any-glob-to-any-file: ["data/**"]
+tests:
+  - changed-files:
+      - any-glob-to-any-file: ["tests/**"]
+docs:
+  - changed-files:
+      - any-glob-to-any-file: ["docs/**", "README.md"]
+infra:
+  - changed-files:
+      - any-glob-to-any-file:
+          [".github/**", "pyproject.toml", "uv.lock", ".pre-commit-config.yaml", "scripts/**"]
