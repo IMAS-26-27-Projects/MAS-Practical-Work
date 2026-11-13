@@ -42,6 +42,33 @@ Every section maps to a criterion of the grading rubric (in brackets).
 Writing rules: English, short paragraphs, every table and figure numbered and referenced,
 spell-check before merging (the rubric penalises from 5 errors on).
 
+## Section 1 draft - Introduction
+
+The problem addressed in this practical work is air traffic conflict detection and tactical
+resolution in a scenario-based environment. Given a fixed snapshot of the airspace and planned
+traffic, the system must identify pairs of aircraft that lose minimum separation and produce a
+clear operational summary for an air traffic controller. The baseline workflow is not real-time:
+it reads the scenario files, processes them in sequence, and generates a final report.
+
+The input is composed of one GraphML file and two JSON files. `airspace.graphml` defines the
+navigation structure (waypoints and airways). `aircraft.json` lists aircraft capabilities such as
+identifier and speed. `flight_plans.json` defines route, departure time and cruise altitude for
+each aircraft. From these three inputs, the flow derives trajectories, validates consistency and
+checks potential losses of separation.
+
+The expected output is a Markdown ATC report (`output/report.md`) that states the analysed
+scenario, whether conflicts were detected, and the relevant conflict details and resolution
+proposals when needed. This output format is mandatory because it is easy to inspect in CI and in
+the repository, while remaining structured enough for later automation.
+
+The assignment requires four mandatory crews: Data Management, Surveillance & Conflict, Tactical
+Resolution and Reporting. A router between Surveillance & Conflict and Tactical Resolution is also
+mandatory: if conflicts are detected, the flow must execute Tactical Resolution before Reporting;
+if no conflicts are found, it must route directly to Reporting. This dynamic branch is a core
+requirement because it demonstrates conditional coordination in the multi-agent flow.
+
+- Peer review status: pending review by another team member.
+
 ## Slides (8-10, up to 10 min)
 
 1 Title and team - 2 Problem - 3 Environment analysis (table) - 4 Crews and flow diagram -
