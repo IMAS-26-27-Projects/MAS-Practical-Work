@@ -11,13 +11,10 @@
 \section{Agent Taxonomy}
 \label{sec:taxonomy}
 
-In this section we analyse the agents of Section~3 with the theory seen in the course:
-agent properties, agent architectures and types of agents by purpose
-\cite{lecture2, lecture3, wooldridge2009}. To keep the tables short we use these
-abbreviations: Flight Data Assistant (FDA), Trajectory Planner (TP), Weather Data
-Collector (WDC), Weather Hazard Analyst (WHA), Radar Controller (RC), Conflict Analyst
-(CA), Executive Controller (EC), Verification Officer (VO), ATC Supervisor (SUP) and ATC
-Report Officer (RO).
+In this section we analyse the thirteen agents of Section~\ref{sec:agents} with the theory
+seen in the course: agent properties, agent architectures and types of agents by purpose
+\cite{lecture2, lecture3, wooldridge2009}. We use the abbreviations of
+Table~\ref{tab:roles}.
 
 % -------------------------------------------------
 \subsection{Agent Properties}
@@ -32,7 +29,8 @@ intermediate files with a fixed structure (Pydantic models).
 \begin{table}[H]
 \centering
 \small
-\caption{Agent properties. \pfull{} = yes, \phalf{} = partially, \pnone{} = no.}
+\caption{Agent properties, grouped by crew. \pfull{} = yes, \phalf{} = partially,
+\pnone{} = no.}
 \label{tab:properties}
 \begin{tabular}{@{}l*{10}{c}@{}}
 \toprule
@@ -42,21 +40,29 @@ intermediate files with a fixed structure (Pydantic models).
 \midrule
 FDA & \phalf & \phalf & \pnone & \phalf & \pfull & \pnone & \pnone & \phalf & \pnone & \pnone \\
 TP  & \pnone & \phalf & \pnone & \phalf & \pfull & \pnone & \pnone & \phalf & \pnone & \pnone \\
+FPO & \pnone & \phalf & \phalf & \phalf & \pfull & \pnone & \pnone & \phalf & \pnone & \pnone \\
+\midrule
 WDC & \pnone & \phalf & \phalf & \phalf & \pfull & \pnone & \pnone & \phalf & \pnone & \pnone \\
 WHA & \phalf & \phalf & \phalf & \phalf & \pfull & \phalf & \pnone & \phalf & \pnone & \pnone \\
+AM  & \pnone & \phalf & \pnone & \phalf & \pfull & \pnone & \pnone & \phalf & \pnone & \pnone \\
+\midrule
 RC  & \pnone & \phalf & \pnone & \phalf & \pfull & \pnone & \pnone & \phalf & \pnone & \pnone \\
 CA  & \phalf & \phalf & \pfull & \phalf & \pfull & \pfull & \pnone & \phalf & \pnone & \pnone \\
+\midrule
 EC  & \pfull & \pfull & \pfull & \pfull & \pfull & \pfull & \phalf & \pfull & \pnone & \pnone \\
+\midrule
 VO  & \pnone & \pfull & \pnone & \phalf & \pfull & \pnone & \pnone & \phalf & \pnone & \pnone \\
 SUP & \pfull & \pfull & \pfull & \pfull & \pfull & \pfull & \pnone & \pfull & \pnone & \pnone \\
+\midrule
 RO  & \phalf & \phalf & \phalf & \phalf & \pfull & \phalf & \pnone & \phalf & \pnone & \pnone \\
+RCO & \pnone & \phalf & \pnone & \phalf & \pfull & \pnone & \pnone & \phalf & \pnone & \pnone \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-The data and detection agents (FDA, TP, WDC, RC, VO) have few properties, because they only
-apply a fixed procedure. On the other hand, EC and SUP have almost all of them, since they
-deal with the open part of the problem: deciding how to solve each conflict.
+Most agents (FDA, TP, FPO, WDC, AM, RC, VO and RCO) have few properties, because they only
+apply a fixed procedure with a tool. On the other hand, EC and SUP have almost all of them,
+since they deal with the open part of the problem: deciding how to solve each conflict.
 
 % -------------------------------------------------
 \subsection{Justification of Non-obvious Property Classifications}
@@ -70,16 +76,22 @@ reactive. EC, VO and SUP are different: in each iteration of the verification lo
 receive new flight plans, a rejection or new feedback, and they have to adapt to it.
 
 \textbf{Proactiveness.} CA does more than pass the list of conflicts on. It decides which
-ones are more urgent and gives the Tactical crew an order to work on them. RO is
-partially proactive, because it points out the critical cases to the human controller
-without being asked.
+ones are more urgent and gives the Tactical crew an order to work on them. FPO is
+partially proactive: by marking emergency and medical flights early, it prepares a
+decision that EC will only take later (moving the other aircraft). RO is also partially
+proactive, because it points out the critical cases to the human controller without being
+asked.
 
 \textbf{Social ability.} Our agents do not use an agent communication language like
 FIPA-ACL. They write and read intermediate files, which works in a similar way to a
 blackboard system \cite{lecture4}, and the Pydantic models act as a shared ontology. The
 only real two-way dialogue happens between EC and SUP: EC proposes a manoeuvre and SUP
 accepts or rejects it, which is close to the propose, accept-proposal and reject-proposal
-acts of FIPA \cite{fipa_acl}.
+acts of FIPA \cite{fipa_acl}. RCO is a special case. Its output follows the standard ATC
+phraseology \cite{icao_doc9432}, which is a controlled language where each message is
+clearly an order to the pilot (``climb to flight level 320''), like the directive speech
+acts we saw in Lecture~4. However, nobody answers these messages inside our system, so we
+only marked it as partial.
 
 \textbf{Rationality.} A rational agent acts towards its goals as far as its beliefs allow
 \cite{lecture3}. The problem is that a language model can have wrong beliefs, for example a
@@ -98,7 +110,8 @@ this is very clear. EC is free to choose how to solve a conflict, but it cannot 
 decision directly: SUP has to approve it, and conflicts that are still unsolved after two
 attempts go to a human controller. In the forum we also agreed that the iteration counter
 is kept in the flow state and not by the language model, so the agent cannot decide to
-skip the limit.
+skip the limit. RCO has even less autonomy, because it can only choose a template and a
+reason, and the tool writes the final message.
 
 \textbf{Temporal continuity and mobility.} Agents with temporal continuity are running all
 the time, and they are not ``once-only computations'' that read an input, produce an
@@ -124,43 +137,50 @@ Table~\ref{tab:classification} shows the result.
 \toprule
 \textbf{Agent} & \textbf{Architecture} & \textbf{Type} & \textbf{Comment} \\
 \midrule
-Flight Data Assistant  & Reactive     & Information   & Combines GraphML and JSON sources \\
-Trajectory Planner     & Reactive     & Information   & Builds the trajectories for the other crews \\
-Weather Data Collector & Reactive     & Information   & Loads the weather snapshot \\
-Weather Hazard Analyst & Hybrid       & Information   & Turns weather data into hazard zones \\
-Radar Controller       & Reactive     & Information   & Runs the detection tool \\
-Conflict Analyst       & Hybrid       & Collaborative & Prioritises conflicts for Tactical \\
-Executive Controller   & Deliberative & Collaborative & BDI-style planning of manoeuvres \\
-Verification Officer   & Reactive     & Collaborative & Same detection rule as the RC \\
-ATC Supervisor         & Hybrid       & Collaborative & Coordinates with the EC \\
-ATC Report Officer     & Deliberative & Interface     & Assists the human controller \\
+Flight Data Assistant        & Reactive     & Information   & Merges GraphML and JSON files \\
+Trajectory Planner           & Reactive     & Information   & Builds the 4D trajectories \\
+Flight Priority Officer      & Reactive     & Information   & Marks priority flights \\
+Weather Data Collector       & Reactive     & Information   & Loads the weather snapshot \\
+Weather Hazard Analyst       & Hybrid       & Information   & Weather $\rightarrow$ constraint zones \\
+Airspace Manager             & Reactive     & Information   & Restrictions $\rightarrow$ constraint zones \\
+Radar Controller             & Reactive     & Information   & Runs the detection tool \\
+Conflict Analyst             & Hybrid       & Collaborative & Prioritises the conflicts \\
+Executive Controller         & Deliberative & Collaborative & BDI planning of manoeuvres \\
+Verification Officer         & Reactive     & Collaborative & Same detection rule as the RC \\
+ATC Supervisor               & Hybrid       & Collaborative & Approves or rejects, gives feedback \\
+ATC Report Officer           & Deliberative & Interface     & Report for the controller \\
+Radio Communications Officer & Reactive     & Interface     & Manoeuvres $\rightarrow$ phraseology \\
 \bottomrule
 \end{tabularx}
 \end{table}
 
-\textbf{Reactive agents.} FDA, TP, WDC, RC and VO do not make plans. They just map a
-situation to an action ($S \rightarrow A$) \cite{lecture2}. RC and VO are a good example,
-because their main rule is ``if two aircraft are closer than 5~NM horizontally and
-1000~ft vertically, report a conflict'' \cite{icao_doc4444}. It reminded us of the
-obstacle-avoidance rule in the reactive layer of TouringMachines \cite{ferguson1992}. We
-want this kind of agent here because the check runs in every iteration, so it has to be
-fast and reliable.
+\textbf{Reactive agents.} FDA, TP, FPO, WDC, AM, RC, VO and RCO do not make plans. They
+just map a situation to an action ($S \rightarrow A$) \cite{lecture2}. RC and VO are a
+good example, because their main rule is ``if two aircraft are closer than 5~NM
+horizontally and 1000~ft vertically, report a conflict'' \cite{icao_doc4444}. It reminded
+us of the obstacle-avoidance rule in the reactive layer of TouringMachines
+\cite{ferguson1992}. FPO and RCO also work with simple rules: ``if the flight is an
+emergency, mark it as priority'' and ``if the approved manoeuvre is a climb, use the climb
+template''. We want this kind of agent here because these checks are simple and run many
+times, so they have to be fast and reliable.
 
 \textbf{Deliberative agents.} EC can be described with the BDI model \cite{bratman1987}.
-Its \emph{beliefs} are the conflicts, the hazard zones, the aircraft performance and the
+Its \emph{beliefs} are the conflicts, the constraint zones, the priority flags and the
 feedback of SUP. Its \emph{desire} is to solve all the conflicts with as little delay or
 extra distance as possible. The manoeuvres it chooses are its \emph{intentions}, and the
-concrete actions (climb, reroute or delay) are its \emph{plans}. When SUP rejects a
-manoeuvre, EC drops that intention and looks for another one, in line with the idea that
-an agent keeps its intentions only while it believes they can be achieved
-\cite{cohen1990}. We also see RO as deliberative, because it has to plan the report from
-the results of all the crews.
+concrete actions (level or speed change, delay or hold, reroute) are its \emph{plans}.
+Before proposing a plan, EC can test it with the what-if \texttt{ManoeuvreSimulatorTool},
+which is a simple form of planning ahead. When SUP rejects a manoeuvre, EC drops that
+intention and looks for another one, in line with the idea that an agent keeps its
+intentions only while it believes they can be achieved \cite{cohen1990}. We also see RO as
+deliberative, because it has to plan the report from the results of all the crews.
 
 \textbf{Hybrid agents.} WHA, CA and SUP mix a reactive part (thresholds and tools) with a
 deliberative part (interpreting, prioritising or deciding). For SUP we found that the
 three layers of InteRRaP \cite{muller1996} describe it quite well. Its behaviour layer
-rejects any manoeuvre that creates a new conflict. Its planning layer looks for the
-reason and suggests something else. Its cooperative layer sends structured feedback to EC.
+rejects any manoeuvre that creates a new conflict or enters a constraint zone. Its
+planning layer looks for the reason and suggests something else. Its cooperative layer
+sends structured feedback to EC.
 
 If we look at the whole system, it also has a hybrid structure. The tools work as a
 reactive layer, the language-model agents as a deliberative layer, and the CrewAI Flow
@@ -187,20 +207,28 @@ solves one part, the results are shared through the intermediate files, and the 
 crew puts them together in the final report.
 
 \textbf{Information agents.} These agents collect, filter and combine data from different
-sources \cite{lecture3}. FDA merges three input files that come in different formats, WDC
-loads the weather data, and WHA turns it into hazard zones. TP and RC then give the
-decision agents a clear view of the trajectories and the conflicts. In the forum we chose
-to load a stored weather file instead of downloading live data, so WDC always works with
-the same snapshot and the results can be repeated.
+sources \cite{lecture3}. FDA merges three input files that come in different formats, and
+FPO adds the priority of each flight. In the Airspace Constraints crew, WDC loads the
+weather snapshot, and WHA and AM turn the weather, the restricted zones and the airport
+constraints into the same object, a constraint zone. In this sense WHA and AM also work as
+translators: very different sources end up in one common representation, so the detector
+does not need to know where a restriction comes from. Finally, TP and RC give the decision
+agents a clear view of the trajectories and the conflicts. In the forum we chose to load a
+stored weather file instead of downloading live data, so the results can be repeated.
 
-\textbf{Interface agent.} RO is the only agent that works for a person, the controller who
-reads the report. We call it an interface agent only in a limited sense, because interface
-agents usually learn from their user \cite{lecture3} and ours does not.
+\textbf{Interface agents.} RO and RCO are the two agents whose output is meant for people.
+RO writes the report for the human controller, and RCO writes the instructions that the
+controller would give to the pilots. RCO is also a kind of translator, because it converts
+the internal Pydantic manoeuvre into the language used between controllers and pilots.
+However, interface agents usually learn from their user \cite{lecture3}, and ours do not,
+so they are interface agents only in a limited sense.
 
 \textbf{Facilitators.} There is no facilitator agent in our design. The CrewAI Flow takes
-this role: it decides which crew runs next and passes the data between them. We think a
-facilitator agent would only make sense if new agents could join the system while it is
-running.
+this role: it decides which crew runs next and passes the data between them. A manager
+agent in a hierarchical process would act as a facilitator inside a crew, but, as
+explained in Section~\ref{sec:crews}, we use sequential processes so that these decisions
+stay deterministic. We think a facilitator agent would only make sense if new agents could
+join the system while it is running.
 
 % -------------------------------------------------
 \subsection{Deterministic Conflict Tool and Agentification}
@@ -219,6 +247,7 @@ and added a CrewAI tool on top of it \cite{crewai_docs}. The algorithm is the sa
 tests check that it gives the same results as the notebook.
 
 Another point we discussed in the forum was to have only one verification mechanism. For
-this reason RC and VO use the same tool, so there is only one detector in the whole
-system. The tool is not an agent by itself: it becomes part of the MAS through the agents
-that decide when to call it and how to read its results.
+this reason RC and VO use the same \texttt{ConflictDetectionTool}, and the
+\texttt{ManoeuvreSimulatorTool} of EC calls the same detection functions, so there is only
+one detector in the whole system. The tool is not an agent by itself: it becomes part of
+the MAS through the agents that decide when to call it and how to read its results.
