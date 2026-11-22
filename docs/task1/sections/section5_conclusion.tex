@@ -18,7 +18,7 @@ why we wrapped the course detector in a single shared deterministic tool and lef
 routing and the retry limit in the hands of the CrewAI Flow. In this way, most of the agents
 act in a reactive and predictable way, and reasoning is reserved for the agents that really
 need it: EC is deliberative, and CA, SUP and RO are hybrid. As a safeguard, a conflict that
-is still rejected after two retries is flagged for a human controller. Overall, the system
+is still rejected after the third attempt is flagged for a human controller. Overall, the system
 works as a cooperative MAS with a hybrid structure that combines information, collaborative
 and interface agents, without needing a facilitator agent, since the CrewAI Flow handles
 the coordination.
