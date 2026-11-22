@@ -1,10 +1,38 @@
 \section{Conclusion}
 \label{sec:conclusion}
 
-In this report, we designed a multi-agent system of six crews and thirteen agents to detect and solve air traffic control conflicts in a static scenario. Based on the four mandatory crews, we added two extra ones: Airspace Constraints and Safety Validation. They manage the airspace constraints and independently verify every proposed manoeuvre. All of these decisions are based on the environment analysis. Since we were working in a static, accessible, deterministic and discrete scenario, which is non-episodic within a single run, we needed a validation loop to prevent a solution from creating new conflicts.
+In this report, we designed a multi-agent system of six crews and thirteen agents to detect
+and solve air traffic control conflicts in a static scenario. On top of the four mandatory
+crews, we added two more: Airspace Constraints and Safety Validation. The first one turns
+the weather, the restricted zones and the airport constraints into constraint zones, and the
+second one independently verifies every proposed manoeuvre. These decisions follow from the
+environment analysis and the five design rules we agreed on. Since the scenario is static,
+accessible, deterministic and discrete, every calculation can be done by deterministic
+tools. However, it is non-episodic within a single run, so we needed a validation loop to
+prevent a solution from creating new conflicts.
 
-The main idea behind our architecture has been separating the numerical calculations from the decision-making. In a safety-critical environment like air traffic control, we could not allow the language model to calculate distances or control the flow of the system. That is why we wrapped the course detector in a single shared deterministic tool and left the routing and the retry limit in the hands of the CrewAI Flow. In this way, most of the agents act in a reactive and predictable way, while deliberative and hybrid reasoning is reserved for the agents that really need it, especially EC, SUP and CA, while keeping the safeguard of flagging a conflict for a human controller if it is not resolved after two retries. Overall, the system works as a cooperative, hybrid MAS combining information, collaborative and interface agents, without needing a facilitator agent since the CrewAI Flow handles that coordination.
+The main idea behind our architecture has been separating the numerical calculations from
+the decision-making. In a safety-critical environment like air traffic control, we could not
+allow the language model to calculate distances or control the flow of the system. That is
+why we wrapped the course detector in a single shared deterministic tool and left the
+routing and the retry limit in the hands of the CrewAI Flow. In this way, most of the agents
+act in a reactive and predictable way, and reasoning is reserved for the agents that really
+need it: EC is deliberative, and CA, SUP and RO are hybrid. As a safeguard, a conflict that
+is still rejected after two retries is flagged for a human controller. Overall, the system
+works as a cooperative MAS with a hybrid structure that combines information, collaborative
+and interface agents, without needing a facilitator agent, since the CrewAI Flow handles
+the coordination.
 
-Another advantage of this design is its modularity. By unifying weather, restricted zones and airport constraints into a single constraint zone model, the detector and the Safety Validation crew can treat every obstacle in the same way. Moreover, the exchange of data using intermediate files based on Pydantic models allows developing and testing every crew separately during the implementation phase.
+Another advantage of this design is its modularity. By unifying weather, restricted zones
+and airport constraints into a single constraint zone model, the detector and the Safety
+Validation crew can treat every restriction in the same way. Moreover, the exchange of data
+through intermediate files based on Pydantic models allows us to develop and test every crew
+separately during the implementation phase.
 
-We are conscious that this model simplifies reality, as real-world air traffic control is dynamic, continuous and changes constantly. Once the basic system is implemented, there are some clear improvements for the future: adding the effect of wind in the calculation of the ETAs, dividing independent conflicts into groups to resolve them in parallel, saving past solutions using case-based reasoning, and adding runway selection based on wind if more detailed airport data is available.
+We are aware that this model simplifies reality: real air traffic control is dynamic,
+continuous and uncertain, because aircraft do not follow their plans exactly and new
+flights and weather keep arriving. Once the basic system works, we will complete the second
+step of the wind design, the wind-corrected ETAs. Beyond that, there are some clear
+improvements for the future: dividing independent conflicts into groups to solve them in
+parallel, saving past solutions with case-based reasoning, and choosing the runway according
+to the wind if more detailed airport data is available.
