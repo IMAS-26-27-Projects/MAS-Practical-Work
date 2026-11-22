@@ -1,0 +1,484 @@
+% =================================================
+% 3. AGENT SELECTION AND DEFINITION
+% Included from main.tex with \input{section3_agent_selection}
+% (it replaces the empty Section 3 headings that are now in main.tex).
+% Needs: tikz (arrows.meta, positioning), booktabs, tabularx, array, float -- already in
+% the preamble. The diagram also needs shapes.geometric, loaded on the next line.
+% New references: references_section4.bib
+% =================================================
+\usetikzlibrary{shapes.geometric}
+\providecommand{\fname}[1]{\nolinkurl{#1}}
+
+\section{Agent Selection and Definition}
+\label{sec:agents}
+
+The assignment fixes four crews (Data Management, Surveillance \& Conflict, Tactical
+Resolution, and Reporting) and allows each team to add more crews and agents, as long as they are justified \cite{mas_assignment}. We designed the rest of the system with a highly interactive procedure, using the shared forum and common messaging group.
+Each proposal was done following a common template (idea, motivation, agents and tools, place in the flow); the rest of the team agreed or answered with concerns, until a resolution was found satisfying. This section explains the result: which crews we
+added and why (Section~\ref{sec:extra-crews}), what each crew does
+(Section~\ref{sec:crews}), which agents form each crew (Section~\ref{sec:roles}) and how
+everything is connected in the CrewAI Flow (Section~\ref{sec:overview}). The agent
+abbreviations are the same as in Section~\ref{sec:taxonomy}.
+
+% -------------------------------------------------
+\subsection{Decision on Additional Crews}
+\label{sec:extra-crews}
+
+Before discussing the proposals, we agreed on five rules to decide about them:
+
+\begin{enumerate}
+  \item \textbf{A new crew only for a new step in the flow.} If an idea needs its own input, its own output file and its own decision point, it becomes a crew. If it only adds information to a step that already exists, it becomes an agent inside that crew.
+  \item \textbf{One detector.} Every conflict, between two aircrafts or between an aircraft and a restricted zone, is found by the same deterministic tool. No crew checks separations with its own logic.
+  \item \textbf{Numbers come from tools, decisions come from agents.} Distances, times and thresholds are always computed by deterministic tools. The language model interprets the results, prioritises and decides, but it never computes a separation \cite{icao_doc4444}.
+  \item \textbf{Files as the interface.} Each crew reads the files of the previous crews and writes one intermediate file with a Pydantic model, so every crew can be developed and tested on its own, as the assignment recommends \cite{mas_assignment}.
+  \item \textbf{Static inputs.} All the information is given as files at the start, and nothing is downloaded while the system runs.
+\end{enumerate}
+
+Table~\ref{tab:proposals} summarises the proposals we discussed and what we
+decided about each one.
+
+\begin{table}[!htbp]
+\centering
+\small
+\caption{Design proposals and decisions.}
+\label{tab:proposals}
+\begin{tabularx}{\textwidth}{@{}>{\raggedright\arraybackslash}p{4.3cm}
+                               >{\raggedright\arraybackslash}p{3.9cm} X@{}}
+\toprule
+\textbf{Proposal} & \textbf{Decision} & \textbf{Main reason} \\
+\midrule
+Meteorological hazards crew
+  & New crew, extended to all airspace constraints
+  & Wind changes the ETAs and storms create areas to avoid \\
+Safety Validation crew
+  & New crew, replaces the loop back to Surveillance
+  & Tactical should not grade its own work \\
+Restricted and military zones (Airspace Manager)
+  & Agent in the Airspace Constraints crew
+  & Not weather, but the same zone model \\
+Airport constraints input
+  & New input, handled by the Airspace Manager
+  & A closure is a zone placed on a node \\
+Flight Priority Officer
+  & Agent in Data Management
+  & It only adds a flag to the normalised data \\
+Radio Communications Officer
+  & Agent in Reporting
+  & It only changes how the manoeuvres are written \\
+Live weather download
+  & Rejected: stored snapshot per scenario
+  & Repeatable results and tests \\
+Weather crew in parallel with Data Management
+  & Rejected: sequential
+  &  It needs the routes, levels and times from Data Management \\
+Runway choice according to wind
+  & Future work
+  & Approach problem; our data has no runways \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\textbf{Airspace Constraints crew.} This crew started as a proposal for meteorological
+hazards. Wind changes the ground speed of each aircraft, so it changes the ETAs and
+therefore when, and even whether, two aircraft meet. Thunderstorms also create areas that
+aircraft must avoid: flight crews try to stay about 20~NM away from a cumulonimbus
+\cite{skybrary_wx_avoidance}, and during weather avoidance speed control is not reliable for
+separation \cite{skybrary_wx_los}. Later the team proposed two more kinds of restrictions:
+restricted or military zones with active hours, which in Europe are managed with the
+Flexible Use of Airspace concept \cite{eurocontrol_ernip3}, and airport constraints
+(closures, ground stops, reduced capacity). At first we thought of adding the restricted
+zones to the weather crew, but they have nothing to do with the weather. Instead of one
+crew for each kind of restriction, we created one crew for all the constraints on the
+airspace, with a specialised agent for each source. All of them produce the same object, a
+\emph{constraint zone}, so the detector and the Safety Validation crew treat every
+restriction in the same way.
+
+This crew runs after Data Management, and not in parallel with it, because it needs its
+output: the trajectories define the area, the flight levels and the time window that the
+constraints must cover, and the first and last node of each route are the airports. It also
+has to finish before Surveillance, because the detector needs the wind to compute correct ETAs
+and the constraint zones to check the trajectories. The wind is used in two steps:
+first the hazard zones, and then the wind-corrected ETAs, which need more changes in the
+detector. Both steps are part of the design, but the second one will be implemented only
+after the first one works.
+
+\textbf{Safety Validation crew.} A manoeuvre can solve one conflict but create a new one,
+or send an aircraft into a hazard zone. In real ATC a clearance is checked before it is
+issued, and European controllers have short-term tools for conflict detection and
+clearance verification \cite{skybrary_mtcd}. Our first draft of the flow sent the new
+flight plans back to the Surveillance crew. We replaced this loop with a separate crew, so
+that Tactical does not grade its own work and the feedback has a clear owner. To respect
+rule~2, the Verification Officer uses the same tool as Surveillance and reads the
+constraint zones from the file of the Airspace Constraints crew, without running that crew
+again.
+
+\textbf{Agents instead of crews.} Following rule~1, the other proposals did not need a new
+step in the flow, so they became agents in existing crews: the Flight Priority Officer in
+Data Management, the Airspace Manager in the Airspace Constraints crew and the Radio
+Communications Officer in Reporting.
+
+\textbf{Rejected ideas and future work.} We rejected downloading live weather data during
+the execution: every run would give different results, it would be hard to test, and the
+assignment gives the inputs as files. Instead, a small script downloads real data from
+Open-Meteo \cite{openmeteo_docs} once and saves it in the scenario folder. Choosing the
+runway according to the wind is left as future work, because our data has nodes but no
+runways, and runway choice belongs to approach control, while our system works en-route
+\cite{skybrary_area_controller}.
+
+% -------------------------------------------------
+\subsection{Crew Definitions}
+\label{sec:crews}
+
+The final system has six crews: the four mandatory ones and two additional ones (marked
+with~*). Table~\ref{tab:crews} gives the purpose of each crew, its agents and the files it
+reads and writes. All the intermediate files are written in the \fname{output/} folder.
+
+\begin{table}[!htbp]
+\centering
+\small
+\caption{Crews of the system. Files numbered \fname{01}--\fname{04} are intermediate
+files in \fname{output/}.}
+\label{tab:crews}
+\begin{tabularx}{\textwidth}{@{}>{\raggedright\arraybackslash}p{2.3cm} X
+                               >{\raggedright\arraybackslash}p{1.25cm}
+                               >{\raggedright\arraybackslash}p{3.3cm}
+                               >{\raggedright\arraybackslash}p{3.3cm}@{}}
+\toprule
+\textbf{Crew} & \textbf{Purpose} & \textbf{Agents} & \textbf{Reads} & \textbf{Writes} \\
+\midrule
+Data Management
+  & Load, validate and normalise the inputs, build the nominal 4D trajectories and mark
+    priority flights
+  & FDA, TP, FPO
+  & \fname{airspace.graphml}, \fname{aircraft.json}, \fname{flight_plans.json}
+  & \fname{01_data_management.json} \\
+\addlinespace
+Airspace Constraints*
+  & Turn the weather, the restricted zones and the airport constraints into wind per level
+    and constraint zones
+  & WDC, WHA, AM
+  & \fname{01}, \fname{weather.json}, \fname{restricted_zones.json},
+    \fname{airport_constraints.json}
+  & \fname{01b_airspace_constraints.json} \\
+\addlinespace
+Surveillance \& Conflict
+  & Detect every loss of separation (aircraft--aircraft and aircraft--zone) and prioritise
+    the conflicts
+  & RC, CA
+  & \fname{01}, \fname{01b}
+  & \fname{02_surveillance.json} \\
+\addlinespace
+Tactical Resolution
+  & Propose one manoeuvre for each conflict
+  & EC
+  & \fname{01}, \fname{01b}, \fname{02}, \fname{04} (on a retry)
+  & \fname{03_tactical_resolution.json} \\
+\addlinespace
+Safety Validation*
+  & Check every manoeuvre again and approve or reject it with feedback
+  & VO, SUP
+  & \fname{01}, \fname{01b}, \fname{03}
+  & \fname{04_safety_validation.json} \\
+\addlinespace
+Reporting
+  & Write the ATC report and the radio instructions
+  & RO, RCO
+  & All previous files
+  & \fname{report.md} \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\textbf{Sequential processes with parallel tasks.} CrewAI also offers a hierarchical process,
+where a manager agent delegates the tasks, as we saw in Lab~6 \cite{crewai_docs}. We do not use
+it. Inside each crew the order of the tasks is always the same, and the decisions about what
+happens next (which crew runs and how many retries are allowed) are taken by the routers of the
+Flow, which are deterministic \cite{crewai_flows}. A manager agent would add one more
+language-model decision exactly where we want the system to be predictable.
+
+A sequential process does not mean that every task waits for the previous one, though.
+Independent tasks run asynchronously, as we also saw in Lab~6. In the Airspace Constraints
+crew, the Airspace Manager works in parallel with the weather agents, and in Data Management
+the Trajectory Planner and the Flight Priority Officer both start as soon as the Flight Data
+Assistant has validated the data. Their results are merged by deterministic code and not by
+another agent, since all of them use the same Pydantic models.
+
+This is also why Tactical Resolution has a single agent: one decision maker, checked by a
+different crew. As future work, in larger scenarios the conflicts could be split into
+independent groups, the connected components of the graph of conflicting aircraft
+\cite{durand1995optimal, stollenwerk2017quantum}, and the Flow could run one Tactical Resolution
+crew per group in parallel. If a manoeuvre created a new conflict between two groups, the
+Safety Validation loop would merge them and solve them again \cite{cluster_disperse2025}. This
+is similar to how real ATC divides the airspace into sectors with a manageable workload
+\cite{skybrary_sectorisation}.
+
+\textbf{Inputs.} Each scenario folder contains the three files required by the assignment and
+three optional files that we added (Table~\ref{tab:inputs}). All times are given in seconds
+from the start of the scenario. If an optional file is missing, the crew writes an empty list,
+so the sample scenarios of the course still work. In cruise, aircraft fly at pressure altitude,
+so we read the cruise altitude of each flight plan as a flight level (30000~ft = FL300), and
+each flight level corresponds to a fixed pressure level in the weather data.
+
+\begin{table}[!htbp]
+\centering
+\small
+\caption{Input files of each scenario.}
+\label{tab:inputs}
+\begin{tabularx}{\textwidth}{@{}>{\raggedright\arraybackslash}p{3.6cm} X@{}}
+\toprule
+\textbf{File} & \textbf{Content} \\
+\midrule
+\multicolumn{2}{@{}l}{\textit{Required by the assignment}} \\
+\fname{airspace.graphml}
+  & Airspace graph. Each node is a waypoint with its latitude and longitude, and each edge
+    is an airway between two waypoints with its distance in NM. \\
+\addlinespace
+\fname{aircraft.json}
+  & One entry per aircraft: identifier and cruise speed in knots. We add an optional
+    \fname{priority} field: \fname{normal} (default), \fname{medical} or
+    \fname{emergency}, so that Tactical moves another aircraft whenever possible
+    \cite{icao_doc4444}. \\
+\addlinespace
+\fname{flight_plans.json}
+  & One entry per flight: aircraft identifier, route (ordered list of waypoints of the
+    graph), departure time and cruise altitude in feet. The first and last waypoints of the
+    route are its airports. \\
+\midrule
+\multicolumn{2}{@{}l}{\textit{Optional, added by us}} \\
+\fname{weather.json}
+  & Weather snapshot downloaded once from Open-Meteo \cite{openmeteo_docs}: the real date and
+    time of the scenario start (\fname{scenario_start_utc}), and a grid of points that covers
+    the airspace graph plus a 20~NM margin. For each point and hour, it gives the wind speed
+    and direction at each pressure level near the cruise levels, the geopotential height of
+    each level (its real altitude that day), the convective available potential energy
+    (CAPE) and the freezing level. \\
+\addlinespace
+\fname{restricted_zones.json}
+  & One entry per zone: identifier, type (restricted, military or danger area), shape (a
+    circle with centre and radius in NM, or a polygon of latitude/longitude points), lower
+    and upper flight level, and the time windows when it is active
+    \cite{eurocontrol_ernip3}. \\
+\addlinespace
+\fname{airport_constraints.json}
+  & One entry per constraint: airport node, type (closure, ground stop, reduced capacity,
+    works or incident), affected movements (departures, arrivals or both), time window and,
+    for reduced capacity, the maximum number of movements per hour. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+The thresholds that turn the weather data into hazard zones are kept in one configuration
+file, \fname{hazard_thresholds.yaml}, each with its reference: the CAPE above which an area
+counts as a convective storm, the buffer around a storm (20~NM \cite{skybrary_wx_avoidance}),
+the wind speed above which a level counts as turbulent, and the temperature range at which
+icing is likely.
+
+\textbf{Constraint zones.} All the restrictions share one model: an area (a circle or a
+polygon, or a graph node for airports), an altitude band, a time window, a type and a
+severity. Since the assignment does not define airports, we take the first and the last
+node of each route as its airports. Airport constraints have no altitude band: a closure or
+a ground stop affects the flights that depart from or arrive at that node inside the time
+window, and Tactical solves it with a ground delay or a hold. Only the departure from the first node and the arrival at the last node of a flight plan
+count as movements; flights that pass over the node at cruise level are not affected.
+
+\textbf{Weather coverage.} The weather snapshot must cover more than the planned routes,
+because Tactical can reroute an aircraft, change its level or delay it. For this reason it
+covers the whole airspace graph plus a 20~NM margin, every level that Tactical may assign
+(cruise level $\pm$4000~ft) and the time window of the scenario including the maximum
+allowed delay. In this way the Safety Validation crew never needs new weather data.
+
+% -------------------------------------------------
+\subsection{Agent Roles and Tools}
+\label{sec:roles}
+
+Each agent is inspired by a real role in air traffic management. As the assignment asks,
+we keep the definitions short (role, goal and task) and avoid long backstories.
+Table~\ref{tab:roles} defines the abbreviations of the agents used in the rest of the report.
+
+\begin{table}[!htbp]
+\centering
+\small
+\caption{Agents, the real role that inspires them, their main task and their tools.}
+\label{tab:roles}
+\begin{tabularx}{\textwidth}{@{}>{\raggedright\arraybackslash}p{2.6cm}
+                               >{\raggedright\arraybackslash}p{2.75cm} X
+                               >{\raggedright\arraybackslash}p{4.25cm}@{}}
+\toprule
+\textbf{Agent} & \textbf{Inspired by} & \textbf{Main task} & \textbf{Tools} \\
+\midrule
+\multicolumn{4}{@{}l}{\textit{Data Management crew}} \\
+Flight Data Assistant (FDA)
+  & Flight data assistant of an area control centre
+  & Load the input files, validate the flight plans and normalise units and formats
+  & \fname{ScenarioLoaderTool} \\
+Trajectory Planner (TP)
+  & Trajectory prediction of the flight data system \cite{skybrary_mtcd}
+  & Build the nominal 4D trajectory of each flight (position and ETA at each waypoint)
+  & \fname{TrajectoryTool} \\
+Flight Priority Officer (FPO)
+  & Supervisor handling emergency and priority flights \cite{icao_doc4444}
+  & Mark priority flights (emergency, medical) so that Tactical moves the other aircraft
+  & \fname{PriorityRulesTool} \\
+\midrule
+\multicolumn{4}{@{}l}{\textit{Airspace Constraints crew}} \\
+Weather Data Collector (WDC)
+  & Meteorological office that supplies data to ATC
+  & Load the weather snapshot and check that it covers the whole area, levels and time
+  & \fname{WeatherSnapshotTool} \\
+Weather Hazard Analyst (WHA)
+  & Aviation forecaster issuing hazard warnings (SIGMET) \cite{aviationweather_api}
+  & Turn the snapshot into wind per flight level and hazard zones (storms, turbulence,
+    icing), and explain them
+  & \fname{WeatherHazardTool} \\
+Airspace Manager (AM)
+  & Airspace Management Cell \cite{eurocontrol_ernip3}
+  & Load restricted and military zones and airport constraints as constraint zones
+  & \fname{AirspaceRestrictionTool} \\
+\midrule
+\multicolumn{4}{@{}l}{\textit{Surveillance \& Conflict crew}} \\
+Radar Controller (RC)
+  & Controller using conflict detection tools \cite{skybrary_mtcd}
+  & Run the detector on all trajectories: aircraft against aircraft and against zones
+  & \fname{ConflictDetectionTool} \\
+Conflict Analyst (CA)
+  & Planner controller \cite{skybrary_exec_planner}
+  & Classify each conflict (type, severity, time left, priority flights) and order them
+  & \fname{SeverityTool} \\
+\midrule
+\multicolumn{4}{@{}l}{\textit{Tactical Resolution crew}} \\
+Executive Controller (EC)
+  & Executive controller \cite{skybrary_exec_planner}
+  & Choose one manoeuvre per conflict (level change, speed change, delay or hold,
+    reroute), using the feedback of SUP on a retry
+  & \fname{ManoeuvreSimulatorTool} \\
+\midrule
+\multicolumn{4}{@{}l}{\textit{Safety Validation crew}} \\
+Verification Officer (VO)
+  & Clearance verification \cite{skybrary_mtcd}
+  & Run the detector again on the modified flight plans and the constraint zones
+  & \fname{ConflictDetectionTool} \\
+ATC Supervisor (SUP)
+  & ATC shift supervisor
+  & Approve or reject each manoeuvre and write structured feedback for EC
+  & \fname{SeverityTool} \\
+\midrule
+\multicolumn{4}{@{}l}{\textit{Reporting crew}} \\
+ATC Report Officer (RO)
+  & Operational reporting of an ATC unit
+  & Write the Markdown report: situation, conflicts, resolutions, clearance status and
+    flagged cases
+  & \fname{FileReadTool} \\
+Radio Communications Officer (RCO)
+  & Radiotelephony of the executive controller \cite{skybrary_phraseology, icao_doc9432}
+  & Turn each approved manoeuvre into a standard radio instruction
+  & \fname{PhraseologyTool} \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+All the tools are deterministic. \fname{FileReadTool} is a built-in CrewAI tool, and the
+other ten are custom tools built with \fname{BaseTool}, as in Lab~4 \cite{crewai_docs}.
+\fname{ConflictDetectionTool} already exists: it wraps the detector of the course notebook
+(Section~\ref{sec:agentification}) and will be extended to check constraint zones and wind.
+Three tools deserve a short comment:
+
+\begin{itemize}
+  \item \fname{ManoeuvreSimulatorTool} is a ``what-if'' tool, like the one that supports
+        MTCD \cite{skybrary_mtcd}. It applies a candidate manoeuvre to a flight plan,
+        rebuilds the trajectory and calls the same detection functions, so EC can test an
+        idea before proposing it. VO still checks the final proposal independently.
+  \item The feedback of SUP is a Pydantic model with the conflict identifier, the decision,
+        the reason (for example, ``new conflict with AC3 at 340~s'' or ``enters storm zone
+        Z2'') and a suggestion, so that EC can actually use it on the retry.
+  \item \fname{PhraseologyTool} fills fixed templates based on standard phraseology,
+        because non-standard phraseology often contributes to incidents
+        \cite{skybrary_phraseology}. The agent only chooses the template and the reason, for
+        example ``AC2, climb to flight level 320, due traffic''.
+\end{itemize}
+
+% -------------------------------------------------
+\subsection{System Overview Diagram}
+\label{sec:overview}
+
+Figure~\ref{fig:flow} shows the complete Flow: the six crews, the two routers and the
+intermediate files.
+
+
+The two routers are deterministic functions of the Flow \cite{crewai_flows}:
+
+\begin{itemize}
+  \item \textbf{Router~1} goes to Tactical Resolution if \fname{02_surveillance.json}
+        contains at least one conflict, either between two aircraft or between an aircraft
+        and a constraint zone. Otherwise it goes directly to Reporting, as the assignment
+        requires \cite{mas_assignment}.
+    \item \textbf{Router~2} goes to Reporting if every manoeuvre is approved. The iteration
+        counter starts at 0 and counts how many times the flow has gone back to Tactical
+        Resolution. If some manoeuvres are rejected and the counter is lower than two, the
+        flow goes back to Tactical Resolution with the feedback of SUP, and only the rejected
+        conflicts are solved again. If they are still rejected when the counter is two (the
+        third attempt), the flow goes to Reporting and the conflict is flagged as ``requires
+        human controller'', together with the last manoeuvre and the reason why it was
+        rejected.
+\end{itemize}
+
+The iteration counter is stored in the state of the Flow and not in any agent, so no
+language model can decide to skip the limit.
+
+As an example, in the scenario \fname{sample_conflict} of the course, AC1 and AC2 fly in
+opposite directions on the same route at 30000~ft. RC finds a head-on conflict at
+$t = 112.5$~s and Router~1 sends it to Tactical. EC proposes that AC2 climbs to FL320. VO
+runs the detector again and finds no conflict, because the vertical distance is now
+2000~ft, so SUP approves it and Router~2 goes to Reporting. There, RCO writes the
+instruction ``AC2, climb to flight level 320, due traffic'' and RO includes it in the
+report with the clearance granted.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+    font=\small,
+    node distance=6.5mm and 10mm,
+    crew/.style={draw, rounded corners=2pt, fill=gray!12, align=center,
+                 minimum width=4.8cm, minimum height=9mm},
+    extra/.style={crew, fill=blue!12},
+    infile/.style={draw, align=center, font=\scriptsize, inner sep=3pt},
+    router/.style={draw, diamond, aspect=2.4, fill=yellow!25, align=center,
+                   inner sep=0.5pt, font=\scriptsize},
+    arr/.style={-{Stealth[length=2mm]}, thick},
+    lbl/.style={font=\scriptsize, inner sep=1.5pt}
+  ]
+  \node[infile, minimum width=4.8cm] (in)
+    {\fname{airspace.graphml} \quad \fname{aircraft.json}\\ \fname{flight_plans.json}};
+  \node[crew, below=of in] (dm) {Data Management Crew\\{\scriptsize FDA, TP, FPO}};
+  \node[extra, below=9mm of dm] (ac) {Airspace Constraints Crew*\\{\scriptsize WDC, WHA, AM}};
+  \node[infile, left=10mm of ac] (cin)
+    {\fname{weather.json}\\ \fname{restricted_zones.json}\\ \fname{airport_constraints.json}};
+  \node[crew, below=9mm of ac] (sc) {Surveillance \& Conflict Crew\\{\scriptsize RC, CA}};
+  \node[router, below=of sc] (r1) {Router 1\\conflicts?};
+  \node[crew, below=9mm of r1] (tr) {Tactical Resolution Crew\\{\scriptsize EC}};
+  \node[extra, below=9mm of tr] (sv) {Safety Validation Crew*\\{\scriptsize VO, SUP}};
+  \node[router, below=of sv] (r2) {Router 2\\approved?};
+  \node[crew, below=12mm of r2] (rp) {Reporting Crew\\{\scriptsize RO, RCO}};
+  \node[infile, below=of rp, double] (out) {\fname{report.md}};
+
+  \draw[arr] (in) -- (dm);
+  \draw[arr] (dm) -- node[lbl, right] {\fname{01_data_management.json}} (ac);
+  \draw[arr] (cin) -- (ac);
+  \draw[arr] (ac) -- node[lbl, right] {\fname{01b_airspace_constraints.json}} (sc);
+  \draw[arr] (sc) -- node[lbl, right] {\fname{02_surveillance.json}} (r1);
+  \draw[arr] (r1) -- node[lbl, right] {traffic or zone conflicts} (tr);
+  \draw[arr] (tr) -- node[lbl, right] {\fname{03_tactical_resolution.json}} (sv);
+  \draw[arr] (sv) -- node[lbl, right] {\fname{04_safety_validation.json}} (r2);
+  \draw[arr] (r2) -- node[lbl, right, align=left]
+    {all approved, or still rejected\\after 2 iterations (flagged)} (rp);
+  \draw[arr] (rp) -- (out);
+
+  \draw[arr] (r1.east) -- ++(4.2,0) coordinate (c1)
+    |- node[lbl, pos=0.25, right] {no conflicts} (rp.east);
+  \draw[arr] (r2.west) -- ++(-2.9,0)
+    |- node[lbl, pos=0.25, left, align=right] {rejected,\\iteration $<2$} (tr.west);
+\end{tikzpicture}
+\caption{CrewAI Flow of the system. Blue crews (*) are the two additional crews. Every crew
+can also read the earlier intermediate files; for example, Tactical Resolution and Safety
+Validation read the constraint zones of \fname{01b}.}
+\label{fig:flow}
+\end{figure}
