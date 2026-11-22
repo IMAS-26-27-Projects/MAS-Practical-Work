@@ -14,11 +14,10 @@
 
 The assignment fixes four crews (Data Management, Surveillance \& Conflict, Tactical
 Resolution, and Reporting) and allows each team to add more crews and agents, as long as they are justified \cite{mas_assignment}. We designed the rest of the system with a highly interactive procedure, using the shared forum and common messaging group.
-Each proposal was done following a common template (idea, motivation, agents and tools, place in the flow); the rest of the team agreed or answered with concerns, until a resolution was found satisfying. This section explains the result: which crews we
+Each proposal followed a common template (idea, motivation, agents and tools, place in the flow); the rest of the team agreed or answered with concerns, until we reached a solution that satisfied everyone. This section explains the result: which crews we
 added and why (Section~\ref{sec:extra-crews}), what each crew does
 (Section~\ref{sec:crews}), which agents form each crew (Section~\ref{sec:roles}) and how
-everything is connected in the CrewAI Flow (Section~\ref{sec:overview}). The agent
-abbreviations are the same as in Section~\ref{sec:taxonomy}.
+everything is connected in the CrewAI Flow (Section~\ref{sec:overview}).
 
 % -------------------------------------------------
 \subsection{Decision on Additional Crews}
@@ -28,7 +27,7 @@ Before discussing the proposals, we agreed on five rules to decide about them:
 
 \begin{enumerate}
   \item \textbf{A new crew only for a new step in the flow.} If an idea needs its own input, its own output file and its own decision point, it becomes a crew. If it only adds information to a step that already exists, it becomes an agent inside that crew.
-  \item \textbf{One detector.} Every conflict, between two aircrafts or between an aircraft and a restricted zone, is found by the same deterministic tool. No crew checks separations with its own logic.
+  \item \textbf{One detector.} Every conflict, between two aircraft or between an aircraft and a restricted zone, is found by the same deterministic tool. No crew checks separations with its own logic.
   \item \textbf{Numbers come from tools, decisions come from agents.} Distances, times and thresholds are always computed by deterministic tools. The language model interprets the results, prioritises and decides, but it never computes a separation \cite{icao_doc4444}.
   \item \textbf{Files as the interface.} Each crew reads the files of the previous crews and writes one intermediate file with a Pydantic model, so every crew can be developed and tested on its own, as the assignment recommends \cite{mas_assignment}.
   \item \textbf{Static inputs.} All the information is given as files at the start, and nothing is downloaded while the system runs.
@@ -469,7 +468,7 @@ report with the clearance granted.
   \draw[arr] (tr) -- node[lbl, right] {\fname{03_tactical_resolution.json}} (sv);
   \draw[arr] (sv) -- node[lbl, right] {\fname{04_safety_validation.json}} (r2);
   \draw[arr] (r2) -- node[lbl, right, align=left]
-    {all approved, or still rejected\\after 2 iterations (flagged)} (rp);
+    {all approved, or still rejected\\at iteration 2 (flagged)} (rp);
   \draw[arr] (rp) -- (out);
 
   \draw[arr] (r1.east) -- ++(4.2,0) coordinate (c1)
