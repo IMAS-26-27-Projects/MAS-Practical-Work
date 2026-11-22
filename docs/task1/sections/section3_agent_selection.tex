@@ -4,7 +4,6 @@
 % (it replaces the empty Section 3 headings that are now in main.tex).
 % Needs: tikz (arrows.meta, positioning), booktabs, tabularx, array, float -- already in
 % the preamble. The diagram also needs shapes.geometric, loaded on the next line.
-% New references: references_section4.bib
 % =================================================
 \usetikzlibrary{shapes.geometric}
 \providecommand{\fname}[1]{\nolinkurl{#1}}
@@ -13,7 +12,7 @@
 \label{sec:agents}
 
 The assignment fixes four crews (Data Management, Surveillance \& Conflict, Tactical
-Resolution, and Reporting) and allows each team to add more crews and agents, as long as they are justified \cite{mas_assignment}. We designed the rest of the system with a highly interactive procedure, using the shared forum and common messaging group.
+Resolution, and Reporting) and allows each team to add more crews and agents, as long as they are justified \cite{mas_assignment}. We designed the rest of the system together in the course forum and our messaging group.
 Each proposal followed a common template (idea, motivation, agents and tools, place in the flow); the rest of the team agreed or answered with concerns, until we reached a solution that satisfied everyone. This section explains the result: which crews we
 added and why (Section~\ref{sec:extra-crews}), what each crew does
 (Section~\ref{sec:crews}), which agents form each crew (Section~\ref{sec:roles}) and how
@@ -27,7 +26,7 @@ Before discussing the proposals, we agreed on five rules to decide about them:
 \begin{enumerate}
   \item \textbf{A new crew only for a new step in the flow.} If an idea needs its own input, its own output file and its own decision point, it becomes a crew. If it only adds information to a step that already exists, it becomes an agent inside that crew.
   \item \textbf{One detector.} Every conflict, between two aircraft or between an aircraft and a restricted zone, is found by the same deterministic tool. No crew checks separations with its own logic.
-  \item \textbf{Numbers come from tools, decisions come from agents.} Distances, times and thresholds are always computed by deterministic tools. The language model interprets the results, prioritises and decides, but it never computes a separation \cite{icao_doc4444}.
+  \item \textbf{Numbers come from tools, decisions come from agents.} Distances, times and thresholds are always computed by deterministic tools. The language model interprets the results, prioritises and decides, but it never computes a separation.
   \item \textbf{Files as the interface.} Each crew reads the files of the previous crews and writes one intermediate file with a Pydantic model, so every crew can be developed and tested on its own, as the assignment recommends \cite{mas_assignment}.
   \item \textbf{Static inputs.} All the information is given as files at the start, and nothing is downloaded while the system runs.
 \end{enumerate}
@@ -206,7 +205,7 @@ different crew. As future work, in larger scenarios the conflicts could be split
 independent groups, the connected components of the graph of conflicting aircraft
 \cite{durand1995optimal, stollenwerk2017quantum}, and the Flow could run one Tactical Resolution
 crew per group in parallel. If a manoeuvre created a new conflict between two groups, the
-Safety Validation loop would merge them and solve them again \cite{cluster_disperse2025}. This
+Safety Validation loop would merge them and solve them again. This
 is similar to how real ATC divides the airspace into sectors with a manageable workload
 \cite{skybrary_sectorisation}.
 
@@ -281,7 +280,7 @@ count as movements; flights that pass over the node at cruise level are not affe
 
 \textbf{Invalid flight plans.} If a flight plan refers to an unknown aircraft, a node that is
 not in the graph or an airway that does not exist, FDA rejects it and gives the reason, as
-the European flight plan processing system does \cite[Sec.~8]{eurocontrol_ifpl_spec}. The plan is not
+the European flight plan processing system does \cite{eurocontrol_ifpl_spec}. The plan is not
 repaired, because guessing a route would mean inventing data. The run continues with the
 valid flights, and the rejected ones are excluded from detection and resolution, since they
 have no trajectory. The report lists them with their reasons and warns that their conflicts
