@@ -1,0 +1,112 @@
+
+\documentclass[11pt,a4paper]{article}
+
+% Packages
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[english]{babel}
+\usepackage{geometry}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{float}
+\usepackage{hyperref}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta, positioning}
+
+% Page layout
+\geometry{margin=2.5cm}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0.5em}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=black,
+    citecolor=blue,
+    urlcolor=blue,
+    pdftitle={ATC Conflict Detection and Resolution System},
+    pdfauthor={MAS Project Team}
+}
+
+% Let large tables share a page with text instead of going alone on a float page
+\renewcommand{\topfraction}{0.9}
+\renewcommand{\bottomfraction}{0.8}
+\renewcommand{\textfraction}{0.07}
+\renewcommand{\floatpagefraction}{0.85}
+\setcounter{topnumber}{3}
+\setcounter{totalnumber}{4}
+
+\begin{document}
+
+% -------------------------------------------------
+% COVER + CONTENTS (FIRST PAGE)
+% -------------------------------------------------
+\thispagestyle{empty}
+\begingroup
+\centering
+\vspace*{0.5cm}
+
+{\Large Universitat Rovira i Virgili}\\[0.2cm]
+{\large Multi-Agent Systems -- Academic Year 2026--2027}\\[1.2cm]
+
+\rule{\textwidth}{0.8pt}\\[0.4cm]
+{\LARGE\bfseries ATC Conflict Detection and Resolution System}\\[0.2cm]
+{\large Multi-Agent System Design Report}\\[0.4cm]
+\rule{\textwidth}{0.8pt}\\[0.8cm]
+
+{\large\bfseries Team 11}\\[0.2cm]
+David Fernández \quad Enric Ferrera \quad Samir Hamada\\
+Pol Marsol \quad Arnau Martínez \quad Miguel Ruiz
+
+\vfill
+
+\begin{minipage}{0.9\textwidth}
+    \centering
+    %{\large\bfseries Contents}\\[0.3cm]
+    \tableofcontents
+\end{minipage}
+
+\vfill
+{\large November 2026}
+
+\clearpage
+\endgroup
+\pagenumbering{arabic}
+
+% -------------------------------------------------
+% 1. INTRODUCTION
+% -------------------------------------------------
+\input{section1_introduction}
+% -------------------------------------------------
+% 2. ENVIRONMENT ANALYSIS
+% -------------------------------------------------
+\input{section2_environment}
+
+% -------------------------------------------------
+% 3. AGENT SELECTION AND DEFINITION
+% -------------------------------------------------
+\input{section3_agent_selection}
+
+% -------------------------------------------------
+% 4. AGENT TAXONOMY
+% -------------------------------------------------
+\input{section4_taxonomy}
+
+
+% -------------------------------------------------
+% 5. CONCLUSIONS
+% -------------------------------------------------
+\input{section5_conclusions}
+% Summarise the five main design decisions in five bullet points.
+
+% -------------------------------------------------
+% BIBLIOGRAPHY
+% -------------------------------------------------
+% References are maintained in the separate references.bib file.
+\clearpage
+\nocite{*}
+\bibliographystyle{plain}
+\bibliography{references}
+
+\end{document}
