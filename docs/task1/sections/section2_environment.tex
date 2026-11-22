@@ -1,0 +1,114 @@
+% =================================================
+% 2. ENVIRONMENT ANALYSIS
+% Included from main.tex with \input{section2_environment}
+% =================================================
+\section{Environment Analysis}
+\label{sec:environment}
+
+Before choosing the agents, we looked at the environment they will work in, using the five
+properties of Lecture~2 \cite{lecture2, wooldridge2009}. It is important to keep in mind
+that our agents do not see a real airspace. They see one scenario, given as files: the
+three required by the assignment (airspace graph, aircraft and flight plans) and the three
+optional ones we added (weather, restricted zones and airport constraints, see
+Table~\ref{tab:inputs}). The weather comes from Open-Meteo \cite{openmeteo_docs}, but we
+download it once with a script and save it in the scenario folder, so the system never
+downloads anything while it runs. The system reads the files, writes the report and stops
+\cite{mas_assignment}. Most of our answers below come from this, and for a real ATC centre
+almost all of them would be the opposite.
+
+\subsection{Accessible vs. Inaccessible}
+
+We consider the environment \textbf{accessible}. All the information the agents need is in
+the input files from the beginning: waypoints, distances, speeds, routes, departure times,
+cruise levels, weather and restrictions. Data Management normalises it once, and after that
+every crew reads the same intermediate files, so no agent has a partial or old version of
+the scenario.
+
+The only limitation is the weather. The snapshot is a forecast for one moment, so it is not
+exactly what the atmosphere will be like. But for our system it is the complete
+information, and there is nothing else to look at. A real controller has it much harder:
+radar data has noise and delays, and the controller does not always know what the pilot is
+going to do.
+
+\subsection{Deterministic vs. Non-deterministic}
+
+Inside our model the environment is \textbf{deterministic}. Aircraft follow their flight
+plans exactly, the wind in the snapshot does not change, and the constraint zones are
+created from fixed thresholds. If we run the same scenario and apply the same manoeuvre
+(level change, speed change, delay or hold, or reroute), we always get the same
+trajectories and the same conflicts. For this reason all the calculations are done by
+deterministic tools and not by the language model (Section~\ref{sec:extra-crews}).
+
+The LLM agents can give different answers in different runs, but we see this as a property
+of the agents, not of the environment. In the real world it is different: the wind changes,
+storms move, and a pilot may take some time to follow an instruction, so the same
+instruction does not always have the same effect.
+
+\subsection{Episodic vs. Non-episodic}
+
+If we compare runs, the environment is \textbf{episodic}. Each scenario is solved on its own
+and nothing is kept for the next one. Inside one run it is not so simple, because the
+decisions depend on each other: if we move one aircraft to solve a conflict, it may end up
+in a new conflict with a third aircraft, or inside a constraint zone. This is exactly why we
+added the Safety Validation crew. It checks the new flight plans again and, if a manoeuvre
+is rejected, sends it back to Tactical Resolution (at most twice).
+
+\subsection{Static vs. Dynamic}
+
+The environment is \textbf{static}. During a run no new flights, positions, weather or
+restrictions arrive, and the scenario only changes because of the manoeuvres our own agents
+propose. Restricted zones and airport constraints have time windows when they are active,
+but we know these windows from the start, so they are part of the input and not a change in
+the environment.
+
+The escalation to a human controller does not change this either. When a conflict is still
+rejected after two iterations, it is marked in the report as ``requires human controller'',
+but the system does not stop to wait for an answer. A real airspace is very dynamic, and a
+real ATC system would have to replan all the time.
+
+\subsection{Discrete vs. Continuous}
+
+The real problem is \textbf{continuous}: positions, altitudes and time can take any value.
+However, our system works with it in a \textbf{discrete} way. The airspace is a graph with a
+finite number of waypoints, the inputs are a finite list of records, the detector samples
+the trajectories at fixed time steps, each constraint zone has an area, an altitude band and
+a time window, and Tactical Resolution can only choose between four types of manoeuvre. The
+values of a manoeuvre (for example, the new flight level) are still numbers, so we would say
+it is a discrete model of a continuous world.
+
+\subsection{Other Properties}
+
+Russell and Norvig also describe some properties that are not in Lecture~2
+\cite{russellnorvig2020}. Two of them help to describe our case. The environment is
+\textbf{multi-agent}, but all the agents cooperate, since they share the same goal (a safe
+and complete report). The aircraft are not agents, because they only follow their flight
+plans. The environment is also \textbf{known}, because the rules, such as the separation
+minima and the thresholds of the zones, are fixed before the run starts.
+
+\subsection{Environment Summary Table}
+
+Table~\ref{tab:environment} summarises our classification and how each property affected
+the design.
+
+\begin{table}[H]
+\centering
+\small
+\caption{Classification of the environment and its effect on the design.}
+\label{tab:environment}
+\begin{tabularx}{\textwidth}{@{}l l X@{}}
+\toprule
+\textbf{Property} & \textbf{Classification} & \textbf{Reason and effect on the design} \\
+\midrule
+Accessibility & Accessible & All the data is in the input files, including the stored
+  weather. All crews read the same intermediate files. \\
+Determinism & Deterministic (in the model) & Same scenario and same manoeuvre give the same
+  result, so calculations are done by tools. \\
+Episodicity & Episodic between runs & Decisions inside a run affect each other, so we added
+  the Safety Validation loop. \\
+Dynamism & Static & Nothing new arrives during the run, so the system runs once and does
+  not need to replan. \\
+Continuity & Discrete (by design) & Waypoint graph, sampled trajectories, constraint zones
+  and four types of manoeuvre. \\
+\bottomrule
+\end{tabularx}
+\end{table}
