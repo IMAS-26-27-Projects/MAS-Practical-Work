@@ -20,11 +20,11 @@ almost all of them would be the opposite.
 
 We consider the environment \textbf{accessible}. All the information the agents need is in
 the input files from the beginning: waypoints, distances, speeds, routes, departure times,
-cruise levels, weather and restrictions. Data Management normalises it once, and after that
+cruise levels, weather and restrictions. Data Management and the Airspace Constraints crews normalise it once, and after that
 every crew reads the same intermediate files, so no agent has a partial or old version of
 the scenario.
 
-The only limitation is the weather. The snapshot is a forecast for one moment, so it is not
+The only limitation is the weather. The snapshot is a forecast made at one moment, so it is not
 exactly what the atmosphere will be like. But for our system it is the complete
 information, and there is nothing else to look at. A real controller has it much harder:
 radar data has noise and delays, and the controller does not always know what the pilot is
@@ -33,7 +33,7 @@ going to do.
 \subsection{Deterministic vs. Non-deterministic}
 
 Inside our model the environment is \textbf{deterministic}. Aircraft follow their flight
-plans exactly, the wind in the snapshot does not change, and the constraint zones are
+plans exactly, the wind of each hour is fixed in the snapshot and does not depend on what our agents do, and the constraint zones are
 created from fixed thresholds. If we run the same scenario and apply the same manoeuvre
 (level change, speed change, delay or hold, or reroute), we always get the same
 trajectories and the same conflicts. For this reason all the calculations are done by
@@ -62,7 +62,7 @@ but we know these windows from the start, so they are part of the input and not 
 the environment.
 
 The escalation to a human controller does not change this either. When a conflict is still
-rejected after two iterations, it is marked in the report as ``requires human controller'',
+rejected after two retries (the third attempt), it is marked in the report as ``requires human controller'',
 but the system does not stop to wait for an answer. A real airspace is very dynamic, and a
 real ATC system would have to replan all the time.
 
@@ -70,11 +70,9 @@ real ATC system would have to replan all the time.
 
 The real problem is \textbf{continuous}: positions, altitudes and time can take any value.
 However, our system works with it in a \textbf{discrete} way. The airspace is a graph with a
-finite number of waypoints, the inputs are a finite list of records, the detector samples
-the trajectories at fixed time steps, each constraint zone has an area, an altitude band and
-a time window, and Tactical Resolution can only choose between four types of manoeuvre. The
-values of a manoeuvre (for example, the new flight level) are still numbers, so we would say
-it is a discrete model of a continuous world.
+finite number of waypoints, the inputs are a finite list of records, the conflicts between aircraft are calculated segment by segment between waypoints, the
+check against constraint zones samples the trajectories at fixed time steps, each constraint zone has an area, an altitude band and
+a time window, and Tactical Resolution can only choose between four types of manoeuvre (Table~\ref{tab:manoeuvres}).
 
 \subsection{Other Properties}
 
@@ -103,12 +101,12 @@ Accessibility & Accessible & All the data is in the input files, including the s
   weather. All crews read the same intermediate files. \\
 Determinism & Deterministic (in the model) & Same scenario and same manoeuvre give the same
   result, so calculations are done by tools. \\
-Episodicity & Episodic between runs & Decisions inside a run affect each other, so we added
-  the Safety Validation loop. \\
+Episodicity & Non-episodic in a run & Decisions inside a run affect each other, so we added
+  the Safety Validation loop. Runs are independent of each other. \\
 Dynamism & Static & Nothing new arrives during the run, so the system runs once and does
   not need to replan. \\
-Continuity & Discrete (by design) & Waypoint graph, sampled trajectories, constraint zones
-  and four types of manoeuvre. \\
+Continuity & Discrete (by design) & Waypoint graph, constraint zones and four types of
+  manoeuvre with fixed steps. \\
 \bottomrule
 \end{tabularx}
 \end{table}
