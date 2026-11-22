@@ -18,7 +18,6 @@ Each proposal followed a common template (idea, motivation, agents and tools, pl
 added and why (Section~\ref{sec:extra-crews}), what each crew does
 (Section~\ref{sec:crews}), which agents form each crew (Section~\ref{sec:roles}) and how
 everything is connected in the CrewAI Flow (Section~\ref{sec:overview}).
-
 % -------------------------------------------------
 \subsection{Decision on Additional Crews}
 \label{sec:extra-crews}
@@ -60,7 +59,7 @@ Airport constraints input
   & A closure is a zone placed on a node \\
 Flight Priority Officer
   & Agent in Data Management
-  & It only adds a flag to the normalised data \\
+  & It only adds the priority to the normalised data \\
 Radio Communications Officer
   & Agent in Reporting
   & It only changes how the manoeuvres are written \\
@@ -233,10 +232,10 @@ each flight level corresponds to a fixed pressure level in the weather data.
     is an airway between two waypoints with its distance in NM. \\
 \addlinespace
 \fname{aircraft.json}
-  & One entry per aircraft: identifier and cruise speed in knots. We add an optional
-    \fname{priority} field: \fname{normal} (default), \fname{medical} or
-    \fname{emergency}, so that Tactical moves another aircraft whenever possible
-    \cite{icao_doc4444}. \\
+   & One entry per aircraft: identifier and cruise speed in knots. We add an optional
+    \fname{status} field with the special-handling indicator of the flight plan (for
+    example \fname{STS/HOSP} or \fname{STS/MEDEVAC}) or the emergency transponder code
+    \fname{7700} \cite{icao_doc4444}. \\
 \addlinespace
 \fname{flight_plans.json}
   & One entry per flight: aircraft identifier, route (ordered list of waypoints of the
@@ -280,6 +279,16 @@ a ground stop affects the flights that depart from or arrive at that node inside
 window, and Tactical solves it with a ground delay or a hold. Only the departure from the first node and the arrival at the last node of a flight plan
 count as movements; flights that pass over the node at cruise level are not affected.
 
+\textbf{Invalid flight plans.} If a flight plan refers to an unknown aircraft, a node that is
+not in the graph or an airway that does not exist, FDA rejects it and gives the reason, as
+the European flight plan processing system does \cite[Sec.~8]{eurocontrol_ifpl_spec}. The plan is not
+repaired, because guessing a route would mean inventing data. The run continues with the
+valid flights, and the rejected ones are excluded from detection and resolution, since they
+have no trajectory. The report lists them with their reasons and warns that their conflicts
+were not checked, because a rejected flight that still has to operate must have its plan
+corrected and resubmitted \cite{eurocontrol_ifpl_spec}. If no flight plan is valid, the report
+says that there was nothing to check instead of reporting that there are no conflicts.
+
 \textbf{Weather coverage.} The weather snapshot must cover more than the planned routes,
 because Tactical can reroute an aircraft, change its level or delay it. For this reason it
 covers the whole airspace graph plus a 20~NM margin, every level that Tactical may assign
@@ -316,7 +325,8 @@ Trajectory Planner (TP)
   & \fname{TrajectoryTool} \\
 Flight Priority Officer (FPO)
   & Supervisor handling emergency and priority flights \cite{icao_doc4444}
-  & Mark priority flights (emergency, medical) so that Tactical moves the other aircraft
+    & Turn the status codes into a priority level and handling rules (for example, do not
+    move this aircraft), so that Tactical moves the other aircraft
   & \fname{PriorityRulesTool} \\
 \midrule
 \multicolumn{4}{@{}l}{\textit{Airspace Constraints crew}} \\
@@ -326,8 +336,8 @@ Weather Data Collector (WDC)
   & \fname{WeatherSnapshotTool} \\
 Weather Hazard Analyst (WHA)
   & Aviation forecaster issuing hazard warnings (SIGMET) \cite{aviationweather_api}
-  & Turn the snapshot into wind per flight level and hazard zones (storms, turbulence,
-    icing), and explain them
+  & Apply the thresholds to the snapshot to get wind per flight level and hazard zones
+    (storms, turbulence, icing), and describe them for the report
   & \fname{WeatherHazardTool} \\
 Airspace Manager (AM)
   & Airspace Management Cell \cite{eurocontrol_ernip3}
@@ -364,8 +374,8 @@ ATC Supervisor (SUP)
 \multicolumn{4}{@{}l}{\textit{Reporting crew}} \\
 ATC Report Officer (RO)
   & Operational reporting of an ATC unit
-  & Write the Markdown report: situation, conflicts, resolutions, clearance status and
-    flagged cases
+  &  Write the Markdown report: situation, conflicts, resolutions, clearance status, flagged
+    cases and rejected flight plans
   & \fname{FileReadTool} \\
 Radio Communications Officer (RCO)
   & Radiotelephony of the executive controller \cite{skybrary_phraseology, icao_doc9432}
@@ -394,6 +404,46 @@ Three tools deserve a short comment:
         \cite{skybrary_phraseology}. The agent only chooses the template and the reason, for
         example ``AC2, climb to flight level 320, due traffic''.
 \end{itemize}
+
+EC can choose between four types of manoeuvre (Table~\ref{tab:manoeuvres}). Each one changes
+the flight plan in a way that \fname{ManoeuvreSimulatorTool} can apply and check, and their
+values use fixed steps, so the number of possible actions is finite.
+
+\begin{table}[!htbp]
+\centering
+\small
+\caption{Manoeuvres available to the Executive Controller.}
+\label{tab:manoeuvres}
+\begin{tabularx}{\textwidth}{@{}>{\raggedright\arraybackslash}p{2.4cm}
+                               >{\raggedright\arraybackslash}p{4.6cm} X@{}}
+\toprule
+\textbf{Manoeuvre} & \textbf{What changes in the flight plan} & \textbf{Values and use} \\
+\midrule
+Level change
+  & Cruise altitude
+  & Climb or descend in steps of 1000~ft, within cruise level $\pm$4000~ft (the levels
+    covered by the weather snapshot). Usually the first choice for traffic conflicts. \\
+\addlinespace
+Speed change
+  & Speed of the aircraft
+  & Steps of 0.01~Mach (about 6~kt at our cruise levels) \cite{skybrary_speed_control},
+    at most $\pm$5\% of the planned speed, because at cruise levels the margin between the
+    minimum and maximum speed is small \cite{skybrary_cruise_guide}. Not used for weather
+    conflicts, because speed control is not reliable during weather avoidance
+    \cite{skybrary_wx_los}. \\
+\addlinespace
+Delay or hold
+  & Departure time (ground delay) or extra time at a waypoint (hold)
+  & Whole minutes, up to the maximum delay covered by the snapshot. Used for airport
+    constraints and when no level or route is free. \\
+\addlinespace
+Reroute
+  & Route
+  & Another path of the airspace graph between the same first and last node, so it only
+    uses airways that exist. Used to avoid constraint zones. \\
+\bottomrule
+\end{tabularx}
+\end{table}
 
 % -------------------------------------------------
 \subsection{System Overview Diagram}
