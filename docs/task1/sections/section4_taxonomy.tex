@@ -115,7 +115,7 @@ iteration. This is close to the propose, accept-proposal and reject-proposal act
 \cite{fipa_acl}. RCO is a special case. Its output follows the standard ATC
 phraseology \cite{icao_doc9432}, which is a controlled language where each message is
 clearly an order to the pilot (``climb to flight level 320''), like the directive speech
-acts we saw in Lecture~4. However, nobody answers these messages inside our system, so we
+acts we saw in Lecture~4 \cite{lecture4}. However, nobody answers these messages inside our system, so we
 only marked it as partial.
 
 \textbf{Rationality.} A rational agent acts towards its goals as far as its beliefs allow
@@ -135,8 +135,8 @@ action. In the other agents, the language model only decides when to call its to
 how to pass on the result, because rule~3 of Section~\ref{sec:extra-crews} keeps every
 calculation in deterministic tools. The reasoning of our agents is not one of the classic
 kinds of the course (rule-based, case-based or approximate reasoning); it is the reasoning
-of a language model in a ReAct loop of thought, action and observation, as we saw in Lab~2
-\cite{yao2023react}. The course also says that more reasoning means more proactivity and
+of a language model that follows the ReAct pattern of thought, action and observation
+used by CrewAI agents \cite{yao2023react}. The course also says that more reasoning means more proactivity and
 more rationality \cite{lecture3}. Our table agrees for proactivity, since CA, EC and SUP are
 the most proactive agents. For rationality it is different: all our agents are fully
 rational, but in the reactive ones this comes from their tools and fixed rules, not from
@@ -153,8 +153,8 @@ were accepted (case-based reasoning) could be a future improvement.
 \textbf{Autonomy.} In the course we saw that the user can limit the autonomy of an agent,
 and that some decisions should not be fully delegated to a machine \cite{lecture3}. In ATC
 this is very clear. EC is free to choose how to solve a conflict, but it cannot apply its
-decision directly: SUP has to approve it, and conflicts that are still unsolved after three
-attempts go to a human controller. In the forum we also agreed that the iteration counter
+decision directly: SUP has to approve it, and conflicts that are still unsolved after the third
+attempt go to a human controller. In the forum we also agreed that the iteration counter
 is kept in the flow state and not by the language model, so the agent cannot decide to
 skip the limit. RCO has even less autonomy, because it can only choose a template and a
 reason, and the tool writes the final message.
@@ -248,7 +248,7 @@ never depend on the language model.
 \label{sec:types}
 
 Agents can also be classified by purpose as collaborative, interface, information or
-facilitator agents \cite{lecture3, nwana1996}. Our system has several of these types
+facilitator agents \cite{lecture3}. Our system has several of these types
 working together.
 
 \textbf{Collaborative agents.} Collaborative agents communicate and cooperate with other
@@ -256,8 +256,8 @@ agents and negotiate to reach mutually acceptable agreements, and they are usual
 deliberative \cite{lecture3}. Air traffic control is one of the examples given in the
 course, and in our design EC and SUP work in this way: EC proposes a manoeuvre, SUP accepts
 it or rejects it with a suggestion, and EC proposes again until they agree or the limit is
-reached. Since all the agents share the same goal, they are benevolent. Using the cooperation
-hierarchy of Lecture~5 \cite{doran1997}, we would place our system among the cooperative MAS
+reached. Since all the agents share the same goal, they are benevolent. Using Franklin's cooperation
+hierarchy, which we saw in Lecture~5 \cite{doran1997}, we would place our system among the cooperative MAS
 with explicit communication, although in our case it is indirect, through the
 intermediate files. It also follows the steps of
 distributed problem solving \cite{lecture4}. The problem is split into crews at design time,
@@ -278,7 +278,7 @@ result of each check, but they do not take part in the agreement about the manoe
 RO writes the report for the human controller, and RCO writes the instructions that the
 controller would give to the pilots. RCO is also a kind of translator, because it converts
 the internal Pydantic manoeuvre into the language used between controllers and pilots.
-However, interface agents usually learn from their user \cite{lecture3}, and ours do not,
+However, interface agents usually learn from their user \cite{lecture3, nwana1996}, and ours do not,
 so they are interface agents only in a limited sense.
 
 \textbf{Facilitators.} There is no facilitator agent in our design. The CrewAI Flow takes
@@ -294,7 +294,8 @@ join the system while it is running.
 
 The conflict detection code from the course notebook is not an agent, so we had to decide
 how to connect it to the MAS. The course presents three options: a translator, a wrapper,
-or rewriting the code as an agent \cite{lecture3, genesereth1994}.
+or rewriting the code as an agent \cite{lecture3}. Genesereth and Ketchpel call the first
+one a \emph{transducer} \cite{genesereth1994}.
 
 A translator was not a good option, because the notebook calculates the validation errors
 but does not return them, and its output has no structure. Rewriting it as an agent would
